@@ -1,39 +1,38 @@
 <template>
   <h1>Gestor de tareas</h1>
   <div class="container">
-    <input v-model="nuevaTarea" placeholder="Escribe la nueva tarea a realizar" @keyup.enter="agregarTarea" />
+    <input v-model="nuevaTareaTitle" placeholder="Escribe la nueva tarea a realizar" @keyup.enter="agregarTarea" />
     <button @click="agregarTarea"> Agregar </button>
   </div>
   <hr>
   <div class="tareas" v-if="tareasPorHacer.length > 0 || tareasEnProceso.length > 0 || tareasRealizadas.length > 0">
-   <!--El if hace que no se muestren estudiantes si hay al menos 1-->
     <h2>Tabla de tareas</h2>
     <div class="tablero">
     <section class="tareas-column todo">
       <h3>Tareas por hacer</h3>
       <ul>
-        <li v-for="(tarea, index) in tareasPorHacer" :key="index">
-          {{ tarea }}
-          <button @click="porHacerAProceso(index)">-></button>
+      <li v-for="tarea in tareasPorHacer" :key="tarea.id">
+          {{ tarea.title }}
+          <button @click="porHacerAProceso(tarea.id)">→</button>
         </li>
       </ul>
     </section>
     <section class="tareas-column inprogress">
       <h3>Tareas en proceso</h3>
       <ul>
-        <li v-for="(tarea, index) in tareasEnProceso" :key="index">
-          {{ tarea }}
-          <button @click="procesoARealizada(index)">-></button>
+        <li v-for="tarea in tareasEnProceso" :key="tarea.id">
+          {{ tarea.title }}
+          <button @click="procesoARealizada(tarea.id)">→</button>
         </li>
-      </ul>
+     </ul>
     </section>
     <section class="tareas-column done">
       <h3>Tareas realizadas</h3>
       <ul>
-        <li v-for="(tarea, index) in tareasRealizadas" :key="index">
-          {{ tarea }}
+        <li v-for="tarea in tareasRealizadas" :key="tarea.id">
+          {{ tarea.title }}
         </li>
-      </ul>
+     </ul>
     </section>
     </div>
   </div>
@@ -42,34 +41,110 @@
   </div>
 </template>
 <script>
-import { ref } from "vue";  //Ref significa que es reactivo a los cambios realizados
-const nuevaTarea = ref(''); //Variable reactiva para el nuevo estudiante
-const tareasPorHacer = ref([]);
-const tareasEnProceso = ref([]);
-const tareasRealizadas = ref([]); 
-const agregarTarea = () => {
-  const nombreTarea = nuevaTarea.value.trim(); //El trim elimina espacios en blanco al inicio y al final
-  if (nombreTarea!=='') { //Si el nombre no está vacío
-    tareasPorHacer.value.push(nombreTarea); //Añade el nuevo estudiante al array
-    nuevaTarea.value = ''; //Limpia el campo de entrada
-  }
-}; //Función para añadir un estudiante
-const porHacerAProceso = (index) => {
-  const tarea = tareasPorHacer.value.splice(index, 1)[0]; //Elimina la tarea del array de tareas por hacer y la guarda en una variable
-  tareasEnProceso.value.push(tarea); //Añade la tarea al array de tareas en proceso
-};
-const procesoARealizada = (index) => {
-  const tarea = tareasEnProceso.value.splice(index, 1)[0]; //Elimina la tarea del array de tareas en proceso y la guarda en una variable
-  tareasRealizadas.value.push(tarea); //Añade la tarea al array de tareas realizadas
-};
+import { ref, onMounted, computed } from "vue"; 
+
+const API_URL = 'http://localhost:3000/tasks'; 
+
+// Todo el estado y la lógica se encapsulan dentro de setup()
 export default {
   name: 'App',
   setup() {
+    // --- Estado Reactivo ---
+    const tasks = ref([]); 
+    const nuevaTareaTitle = ref(''); 
+
+    // --- Funciones de la API ---
+
+    // 1. Cargar las tareas al iniciar (GET /tasks)
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch(API_URL);
+        if (response.ok) {
+            const data = await response.json();
+            tasks.value = Array.isArray(data) ? data : [];
+        } else {
+             console.error("Error en la respuesta del servidor:", response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error("Error de conexión al obtener tareas. ¿Está JSON Server encendido en http://localhost:3000?", error);
+      }
+    };
+
+    // 2. Agregar una nueva tarea (POST /tasks)
+    const agregarTarea = async () => {
+      const title = nuevaTareaTitle.value.trim();
+      if (title !== '') {
+        const nueva = {
+          title: title,
+          // JSON Server asigna el ID y status por defecto si no lo enviamos
+          status: 'todo' // Agregamos status para evitar problemas con algunos backends que esperan el campo.
+        };
+        try {
+          const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nueva)
+          });
+          const data = await response.json();
+          tasks.value.push(data); 
+          nuevaTareaTitle.value = '';
+        } catch (error) {
+          console.error("Error al agregar la tarea:", error);
+        }
+      }
+    };
+
+    // 3. Función genérica para cambiar el estado (CORREGIDO: PATCH /tasks/:id)
+    const actualizarEstadoTarea = async (id, nuevoEstado) => {
+      try {
+        // Usamos la ruta estándar de JSON Server: /tasks/:id
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'PATCH', // PATCH para actualizar solo el campo 'status'
+          headers: { 'Content-Type': 'application/json' },
+          // Enviamos el objeto de actualización con el campo 'status'
+          body: JSON.stringify({ status: nuevoEstado }) 
+        });
+
+        if (response.ok) {
+          // Actualiza el array local (tasks) para que la UI se refresque
+          const index = tasks.value.findIndex(t => t.id == id); 
+          if (index !== -1) {
+            tasks.value[index].status = nuevoEstado;
+          }
+        } else {
+             console.error("Error al actualizar la tarea:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error de conexión al actualizar el estado:", error);
+      }
+    };
+
+    // 4. Mover de "Por Hacer" a "En Proceso"
+    const porHacerAProceso = (id) => {
+      actualizarEstadoTarea(id, 'doing'); 
+    };
+
+    // 5. Mover de "En Proceso" a "Realizada"
+    const procesoARealizada = (id) => {
+      actualizarEstadoTarea(id, 'done');
+    };
+
+    // --- Propiedades Computadas para filtrar ---
+
+    const tareasPorHacer = computed(() => tasks.value.filter(tarea => tarea.status === 'todo'));
+    const tareasEnProceso = computed(() => tasks.value.filter(tarea => tarea.status === 'doing'));
+    const tareasRealizadas = computed(() => tasks.value.filter(tarea => tarea.status === 'done'));
+
+    // --- Hook de Ciclo de Vida ---
+    // ESTA LLAMADA ESTÁ AHORA DENTRO DEL setup()
+    onMounted(fetchTasks); 
+
+    // --- Exposición de variables y funciones al template ---
     return {
-      nuevaTarea,
+      nuevaTareaTitle,
       tareasPorHacer,
       tareasEnProceso,
-      tareasRealizadas,   
+      tareasRealizadas, 
       agregarTarea,
       porHacerAProceso,
       procesoARealizada,
@@ -123,6 +198,7 @@ li {
   align-items: center;
   border-color: darkslateblue;
   border-style: solid;
+  color: black;
 }
 .tablero {
   display: flex; /* Habilita el modo Flexbox */
@@ -141,5 +217,8 @@ li {
   background: #fdfdfd;
   max-height: 400px; 
   overflow-y: auto; 
+}
+body {
+  color:black;
 }
 </style>

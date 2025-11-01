@@ -1,0 +1,27 @@
+{
+  "tasks": [
+    {
+      "id": "1",
+      "title": "Aprender Vue Composition API",
+      "status": "done"
+    },
+    {
+      "id": "2",
+      "title": "Implementar Petición POST",
+      "status": "done"
+    },
+    {
+      "id": "3",
+      "title": "Grabar video explicativo",
+      "status": "done"
+    },
+    {
+      "id": "21a7",
+      "title": "Realizar la API"
+    },
+    {
+      "id": "f13d",
+      "title": "Realizar la API"
+    }
+  ]
+}
