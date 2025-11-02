@@ -45,17 +45,13 @@ import { ref, onMounted, computed } from "vue";
 
 const API_URL = 'http://localhost:3000/tasks'; 
 
-// Todo el estado y la lógica se encapsulan dentro de setup()
 export default {
   name: 'App',
   setup() {
-    // --- Estado Reactivo ---
+
     const tasks = ref([]); 
     const nuevaTareaTitle = ref(''); 
 
-    // --- Funciones de la API ---
-
-    // 1. Cargar las tareas al iniciar (GET /tasks)
     const fetchTasks = async () => {
       try {
         const response = await fetch(API_URL);
@@ -70,14 +66,13 @@ export default {
       }
     };
 
-    // 2. Agregar una nueva tarea (POST /tasks)
     const agregarTarea = async () => {
-      const title = nuevaTareaTitle.value.trim();
+      const title = nuevaTareaTitle.value.trim(); 
       if (title !== '') {
         const nueva = {
           title: title,
-          // JSON Server asigna el ID y status por defecto si no lo enviamos
-          status: 'todo' // Agregamos status para evitar problemas con algunos backends que esperan el campo.
+
+          status: 'todo' 
         };
         try {
           const response = await fetch(API_URL, {
@@ -94,19 +89,16 @@ export default {
       }
     };
 
-    // 3. Función genérica para cambiar el estado (CORREGIDO: PATCH /tasks/:id)
     const actualizarEstadoTarea = async (id, nuevoEstado) => {
       try {
-        // Usamos la ruta estándar de JSON Server: /tasks/:id
         const response = await fetch(`${API_URL}/${id}`, {
-          method: 'PATCH', // PATCH para actualizar solo el campo 'status'
+
+          method: 'PATCH', 
           headers: { 'Content-Type': 'application/json' },
-          // Enviamos el objeto de actualización con el campo 'status'
           body: JSON.stringify({ status: nuevoEstado }) 
         });
 
         if (response.ok) {
-          // Actualiza el array local (tasks) para que la UI se refresque
           const index = tasks.value.findIndex(t => t.id == id); 
           if (index !== -1) {
             tasks.value[index].status = nuevoEstado;
@@ -119,27 +111,18 @@ export default {
       }
     };
 
-    // 4. Mover de "Por Hacer" a "En Proceso"
     const porHacerAProceso = (id) => {
       actualizarEstadoTarea(id, 'doing'); 
     };
 
-    // 5. Mover de "En Proceso" a "Realizada"
     const procesoARealizada = (id) => {
       actualizarEstadoTarea(id, 'done');
     };
-
-    // --- Propiedades Computadas para filtrar ---
-
     const tareasPorHacer = computed(() => tasks.value.filter(tarea => tarea.status === 'todo'));
     const tareasEnProceso = computed(() => tasks.value.filter(tarea => tarea.status === 'doing'));
     const tareasRealizadas = computed(() => tasks.value.filter(tarea => tarea.status === 'done'));
-
-    // --- Hook de Ciclo de Vida ---
-    // ESTA LLAMADA ESTÁ AHORA DENTRO DEL setup()
     onMounted(fetchTasks); 
 
-    // --- Exposición de variables y funciones al template ---
     return {
       nuevaTareaTitle,
       tareasPorHacer,
@@ -201,15 +184,15 @@ li {
   color: black;
 }
 .tablero {
-  display: flex; /* Habilita el modo Flexbox */
-  gap: 20px; /* Espacio entre las columnas */
+  display: flex; 
+  gap: 20px; 
   padding: 10px;
   justify-content: center; 
   align-items: flex-start; 
 }
 
 .tareas-column {
-  flex: 1; /* Hace que las 3 columnas tengan el mismo ancho */
+  flex: 1; 
   min-width: 0;
   padding: 15px;
   border-radius: 10px;

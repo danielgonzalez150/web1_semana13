@@ -13,15 +13,12 @@
     {
       "id": "3",
       "title": "Grabar video explicativo",
-      "status": "done"
+      "status": "doing"
     },
     {
-      "id": "21a7",
-      "title": "Realizar la API"
-    },
-    {
-      "id": "f13d",
-      "title": "Realizar la API"
+      "id": "9c07",
+      "title": "Entregar el archivo",
+      "status": "todo"
     }
   ]
 }
